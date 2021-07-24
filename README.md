@@ -1,1 +1,1 @@
-# aspnetcore-prometheus-grafana
+# .NET Core project with Prometheus + Grafana + Docker
