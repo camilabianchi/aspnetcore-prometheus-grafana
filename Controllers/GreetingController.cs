@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Prometheus.DTO;
@@ -11,7 +9,9 @@ namespace Prometheus.Controllers
     [Route("[controller]")]
     public class GreetingController : ControllerBase
     {
-        private static readonly string[] Greetings = new[]
+        private static readonly Counter _accessCounter = Metrics.CreateCounter("api_greeting_access_counter", "Greeting counter");
+
+        private static List<string> Greetings = new ()
         {
             "Hi!", "Hello!", "Hey!", "Hey hoy!"
         };
@@ -24,14 +24,11 @@ namespace Prometheus.Controllers
         }
 
         [HttpGet]
-        public IEnumerable<Greeting> Get()
+        public ActionResult<IEnumerable<Greeting>> Get()
         {
-            var rng = new Random();
-            return Enumerable.Range(1, 3).Select(index => new Greeting
-            {
-                Text = Greetings[rng.Next(Greetings.Length)]
-            })
-            .ToArray();
+            _accessCounter.Inc();
+
+            return Ok(Greetings);
         }
     }
 }

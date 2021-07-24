@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -11,9 +10,12 @@ namespace Prometheus.Controllers
     [Route("[controller]")]
     public class WeatherForecastController : ControllerBase
     {
-        private static readonly string[] Summaries = new[]
+        private static readonly Gauge _amountControl = Metrics.CreateGauge("api_weatherforecast_amount_control", "Weather Forecast amount control");
+        private static readonly Counter _accessCounter = Metrics.CreateCounter("api_weatherforecast_access_counter", "Weather Forecast counter");
+
+        private static List<string> Summaries = new ()
         {
-            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+            "Freezing", "Warm", "Hot", "Scorching"
         };
 
         private readonly ILogger<WeatherForecastController> _logger;
@@ -24,16 +26,35 @@ namespace Prometheus.Controllers
         }
 
         [HttpGet]
-        public IEnumerable<WeatherForecast> Get()
+        public ActionResult<IEnumerable<WeatherForecast>> Get()
         {
-            var rng = new Random();
-            return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+            _accessCounter.Inc();
+
+            return Ok(Summaries);
+        }
+
+        [HttpPost]
+        public ActionResult<IEnumerable<WeatherForecast>> Add(WeatherForecast weatherForecast)
+        {
+            _amountControl.Inc();
+           
+            Summaries.Add(weatherForecast.Summary);
+
+            return Ok(Summaries);
+        }
+
+        [HttpDelete]
+        public ActionResult<IEnumerable<WeatherForecast>> Delete(WeatherForecast weatherForecast)
+        {
+            var entryToDelete = Summaries.FirstOrDefault(x => x == weatherForecast.Summary);
+            if (entryToDelete is not null)
             {
-                Date = DateTime.Now.AddDays(index),
-                TemperatureC = rng.Next(-20, 55),
-                Summary = Summaries[rng.Next(Summaries.Length)]
-            })
-            .ToArray();
+                Summaries.Remove(entryToDelete);
+
+                _amountControl.Dec();
+            }
+
+            return Ok(Summaries);
         }
     }
 }
